@@ -12,7 +12,7 @@ List of modifiers:
 
 * Mesh - allows you to transfer data from an external mesh to this mesh. For example, you can replace the Tangent array of this mesh with the Normal array of another mesh. <br> <img src="/../pics/pics/Mesh.png" width="50%" height="50%">
 
-* Bounds - allows you to set the position and size of the [bounds] of this mesh. Useful in case you are animating a mesh and it goes beyond the original boundaries, which can lead to the camera clipping the render. <br> <img src="/../pics/pics/Bounds.png" width="50%" height="50%">
+* Bounds - allows you to set the position and size of the [bounds](https://docs.unity3d.com/ScriptReference/Mesh-bounds.html) of this mesh. Useful in case you are animating a mesh and it goes beyond the original boundaries, which can lead to the camera clipping the render. <br> <img src="/../pics/pics/Bounds.png" width="50%" height="50%">
 
 How to use:
 -----------
@@ -20,4 +20,4 @@ To apply import modifiers to a mesh, it is necessary to select not the model obj
 
 Notes:
 ------
-This utility stores import settings in the [meta file]. If there are any errors, then remove the line [userData: ...] from the [meta" file].
+This utility stores import settings in the [meta file](https://docs.unity3d.com/2018.4/Documentation/Manual/BehindtheScenes.html). If there are any errors, then remove the line [userData: ...](https://docs.unity3d.com/ScriptReference/AssetImporter-userData.html) from the [meta" file](https://docs.unity3d.com/2018.4/Documentation/Manual/BehindtheScenes.html).
