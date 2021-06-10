@@ -1,7 +1,8 @@
 # Unity Mesh Importer
 
 Unity Mesh Importer is a utility that applies modifiers to its meshes at the time of importing a 3d model.
-![Unity Mesh Importer](/../pics/pics/All.png "Mesh Importer"){:height="50%" width="50%"}
+
+<img src="/../pics/pics/All.png" width="100" height="100">
 
 List of modifiers:
 ------------------
