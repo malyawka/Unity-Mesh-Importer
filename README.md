@@ -8,14 +8,11 @@ List of modifiers:
 ------------------
 * Combine - allows you to combine two arrays of UV coordinates into one array (provided that these two are two-dimensional). The X and Y fields of the second array will be written to the Z and W fields of the first array. The second array will be cleared. <img src="/../pics/pics/Combine.png" width="50%" height="50%">
 
-* Manual - allows you to write a specific value to any mesh array. This will allow it to be used, for example, as an origin point.
-<img src="/../pics/pics/Manual.png" width="50%" height="50%">
+* Manual - allows you to write a specific value to any mesh array. This will allow it to be used, for example, as an origin point. <img src="/../pics/pics/Manual.png" width="50%" height="50%">
 
-* Mesh - allows you to transfer data from an external mesh to this mesh. For example, you can replace the Tangent array of this mesh with the Normal array of another mesh.
-<img src="/../pics/pics/Mesh.png" width="50%" height="50%">
+* Mesh - allows you to transfer data from an external mesh to this mesh. For example, you can replace the Tangent array of this mesh with the Normal array of another mesh. <img src="/../pics/pics/Mesh.png" width="50%" height="50%">
 
-* Bounds - allows you to set the position and size of the border of this mesh. Useful in case you are animating a mesh and it goes beyond the original boundaries, which can lead to the camera clipping the render.
-<img src="/../pics/pics/Bounds.png" width="50%" height="50%">
+* Bounds - allows you to set the position and size of the border of this mesh. Useful in case you are animating a mesh and it goes beyond the original boundaries, which can lead to the camera clipping the render. <img src="/../pics/pics/Bounds.png" width="50%" height="50%">
 
 How to use:
 -----------
