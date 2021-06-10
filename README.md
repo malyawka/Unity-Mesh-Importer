@@ -6,7 +6,7 @@ Unity Mesh Importer is a utility that applies modifiers to its meshes at the tim
 
 List of modifiers:
 ------------------
-* Combine - allows you to combine two arrays of UV coordinates into one array (provided that these two are two-dimensional). The X and Y fields of the second array will be written to the Z and W fields of the first array. The second array will be cleared.
+* Combine - <img src="/../pics/pics/Combine.png" width="50%" height="50%"> allows you to combine two arrays of UV coordinates into one array (provided that these two are two-dimensional). The X and Y fields of the second array will be written to the Z and W fields of the first array. The second array will be cleared.
 
 * Manual - allows you to write a specific value to any mesh array. This will allow it to be used, for example, as an origin point.
 
