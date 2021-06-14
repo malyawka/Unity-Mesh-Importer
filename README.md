@@ -20,6 +20,11 @@ How to use:
 -----------
 To apply import modifiers to a mesh, it is necessary to select not the model object in the project, but the mesh itself inside it. This utility overrides the default Mesh Inspector behavior.
 
+Project Setttings:
+-----------------
+<img src="/../pics/pics/ProjectSettings.png" width="50%" height="50%">
+To combine all untouched UV arrays in all meshes in the project, there is a corresponding option in the project settings.
+
 Notes:
 ------
 This utility stores import settings in the [meta file](https://docs.unity3d.com/2018.4/Documentation/Manual/BehindtheScenes.html). If there are any errors, then remove the line [userData: ...](https://docs.unity3d.com/ScriptReference/AssetImporter-userData.html) from the [meta" file](https://docs.unity3d.com/2018.4/Documentation/Manual/BehindtheScenes.html).
