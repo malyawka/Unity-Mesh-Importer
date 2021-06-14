@@ -17,27 +17,55 @@ namespace MeshExtensions.Editor
 
         private void OnPostprocessModel(GameObject obj)
         {
-            if (assetImporter.userData == string.Empty) return;
             _userData = JsonUtility.FromJson<UserData>(assetImporter.userData);
-            if (_userData.meshFunctions == null || _userData.meshFunctions.Length == 0) return;
+            _userData ??= new UserData();
             
             MeshFilter[] meshFilters = obj.GetComponentsInChildren<MeshFilter>();
-            List<MeshModifier> functions = _userData.meshFunctions.ToList();
-            
-            foreach (MeshFilter meshFilter in meshFilters)
+
+            if (_userData.meshModifiers != null && _userData.meshModifiers.Length > 0)
             {
-                if (functions.FindIndex(f => f.id == meshFilter.sharedMesh.name) == -1) continue;
-                
-                List<MeshModifier> currentFunctions = functions.FindAll(f => f.id == meshFilter.sharedMesh.name);
-                foreach (MeshModifier currentFunction in currentFunctions)
+                List<MeshModifier> functions = _userData.meshModifiers.ToList();
+            
+                foreach (MeshFilter meshFilter in meshFilters)
                 {
-                    switch (currentFunction.modifier)
+                    if (functions.FindIndex(f => f.id == meshFilter.sharedMesh.name) == -1) continue;
+                
+                    List<MeshModifier> currentFunctions = functions.FindAll(f => f.id == meshFilter.sharedMesh.name);
+                    foreach (MeshModifier currentFunction in currentFunctions)
                     {
-                        case Modifier.Combine: Combine(meshFilter, currentFunction); break;
-                        case Modifier.Manual: Manual(meshFilter, currentFunction); break;
-                        case Modifier.Mesh: FromMesh(meshFilter, currentFunction); break;
-                        case Modifier.Bounds: Bounds(meshFilter, currentFunction); break;
+                        switch (currentFunction.modifier)
+                        {
+                            case Modifier.Combine: Combine(meshFilter, currentFunction); break;
+                            case Modifier.Manual: Manual(meshFilter, currentFunction); break;
+                            case Modifier.Mesh: FromMesh(meshFilter, currentFunction); break;
+                            case Modifier.Collapse: Collapse(meshFilter, currentFunction); break;
+                            case Modifier.Bounds: Bounds(meshFilter, currentFunction); break;
+                        }
                     }
+                }
+            }
+            else
+            {
+                ProjectSettings settings = ProjectSettings.GetOrCreateSettings();
+                ModelImporter modelImporter = (ModelImporter) assetImporter;
+                if (settings.autoCollapsePostProcessor)
+                {
+                    List<MeshModifier> functions = new List<MeshModifier>();
+                    foreach (MeshFilter meshFilter in meshFilters)
+                    {
+                        MeshModifier m = new MeshModifier(meshFilter.sharedMesh.name);
+                        m.modifier = Modifier.Collapse;
+                        m.folds = meshFilter.sharedMesh.GetFolds(modelImporter.generateSecondaryUV);
+                        functions.Add(m);
+                        
+                        Collapse(meshFilter, m);
+                        Debug.Log($"UVs for mesh '{meshFilter.sharedMesh.name}' auto collapsed. Asset '{assetPath}.'");
+                    }
+                    
+                    _userData.meshModifiers = functions.ToArray();
+                    assetImporter.userData = JsonUtility.ToJson(_userData);
+                    
+                    EditorUtility.SetDirty(assetImporter);
                 }
             }
             
@@ -51,8 +79,9 @@ namespace MeshExtensions.Editor
 
         private void Combine(MeshFilter m, MeshModifier f)
         {
+            if (f.uVs[0] == UVChannel.None || f.uVs[1] == UVChannel.None) return;
+            
             Mesh mesh = m.sharedMesh;
-
             List<Vector4> mainPoints = new List<Vector4>(), failPoints = new List<Vector4>();
             
             mesh.GetUVs((int)f.uVs[0], mainPoints);
@@ -107,7 +136,7 @@ namespace MeshExtensions.Editor
                 }
                 mesh.SetColors(colors);
             }
-            else if (f.entities[0] == Entity.UV)
+            else if (f.entities[0] == Entity.UV && f.uVs[0] != UVChannel.None)
             {
                 List<Vector4> points = new List<Vector4>();
                 for (int i = 0; i < mesh.vertexCount; i++)
@@ -156,7 +185,7 @@ namespace MeshExtensions.Editor
                         anotherMesh.colors[i].a));
                 }
             }
-            else if (f.entities[1] == Entity.UV)
+            else if (f.entities[1] == Entity.UV && f.uVs[1] != UVChannel.None)
             {
                 anotherMesh.GetUVs((int) f.uVs[1], anotherPoints);
             }
@@ -203,7 +232,7 @@ namespace MeshExtensions.Editor
                 }
                 mesh.SetColors(colors);
             }
-            else if (f.entities[0] == Entity.UV)
+            else if (f.entities[0] == Entity.UV && f.uVs[0] != UVChannel.None)
             {
                 List<Vector4> points = new List<Vector4>();
                 for (int i = 0; i < mesh.vertexCount; i++)
@@ -211,6 +240,50 @@ namespace MeshExtensions.Editor
                     points.Add(anotherPoints[i]);
                 }
                 mesh.SetUVs((int) f.uVs[0], points);
+            }
+        }
+
+        private void Collapse(MeshFilter m, MeshModifier f)
+        {
+            Mesh mesh = m.sharedMesh;
+            ModelImporter modelImporter = (ModelImporter) assetImporter;
+            UVFold[] folds = f.folds;
+            List<Vector4>[] pointsArray = new List<Vector4>[folds.Length];
+
+            for (int a = 0; a < folds.Length; a++)
+            {
+                pointsArray[a] = new List<Vector4>();
+                for (int i = 0; i < mesh.vertexCount; i++)
+                {
+                    pointsArray[a].Add(new Vector4(
+                        mesh.GetUVVector(folds[a].xy, i).x, 
+                        mesh.GetUVVector(folds[a].xy, i).y,
+                        mesh.GetUVVector(folds[a].zw, i).z, 
+                        mesh.GetUVVector(folds[a].zw, i).w));
+                }
+            }
+
+            for (int u = 0; u < 8; u++)
+            {
+                if (u == 1 && modelImporter.generateSecondaryUV) continue;
+                mesh.SetUVs(u, new List<Vector2>());
+            }
+
+            for (var a = 0; a < folds.Length; a++)
+            {
+                if (folds[a].zw == UVChannel.None)
+                {
+                    List<Vector2> points = new List<Vector2>();
+                    for (int i = 0; i < mesh.vertexCount; i++)
+                    {
+                        points.Add(new Vector2(pointsArray[a][i].x, pointsArray[a][i].y));
+                    }
+                    mesh.SetUVs((int) folds[a].origin, points);
+                }
+                else
+                {
+                    mesh.SetUVs((int) folds[a].origin, pointsArray[a]);    
+                }
             }
         }
 
