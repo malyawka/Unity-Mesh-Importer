@@ -12,6 +12,8 @@ List of modifiers:
 
 * <b>Mesh</b> - allows you to transfer data from an external mesh to this mesh. For example, you can replace the Tangent array of this mesh with the Normal array of another mesh. <br> <img src="/../pics/pics/Mesh.png" width="50%" height="50%">
 
+* <b>Collapse</b> - сoncatenates all untouched UV arrays in this mesh. This parameter depends on the "generateSecondaryUV" value in the model import settings. <br> <img src="/../pics/pics/Collapse.png" width="50%" height="50%">
+
 * <b>Bounds</b> - allows you to set the position and size of the [bounds](https://docs.unity3d.com/ScriptReference/Mesh-bounds.html) of this mesh. Useful in case you are animating a mesh and it goes beyond the original boundaries, which can lead to the camera clipping the render. <br> <img src="/../pics/pics/Bounds.png" width="50%" height="50%">
 
 How to use:
