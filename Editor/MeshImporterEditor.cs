@@ -17,34 +17,74 @@ namespace MeshExtensions.Editor
         private UnityEditor.Editor _defaultEditor;
         private UserData _userData;
         private bool _modified;
+        private Mesh _mesh;
+        private ModelImporter _modelImporter;
 
         #endregion
 
         #region Properties
 
         private int IndentLevel { get { return EditorGUI.indentLevel; } set { EditorGUI.indentLevel = value; } }
+
+        private Mesh GetMesh { get { if (!_mesh) _mesh = target as Mesh; return _mesh; } }
+
         private Func<Enum, bool> CheckEnabledMod => f =>
         {
-	        return (Modifier) f == Modifier.Combine ||
+	        return (Modifier) f == Modifier.Combine && _userData.meshModifiers.All(modifier => modifier.modifier != Modifier.Collapse)||
 	               (Modifier) f == Modifier.Manual ||
 	               (Modifier) f == Modifier.Mesh ||
+	               (Modifier) f == Modifier.Collapse && _userData.meshModifiers.All(modifier => modifier.modifier != Modifier.Collapse) ||
 	               (Modifier) f == Modifier.Bounds ||
 	               (Modifier) f == Modifier.None;
         };
 
         private Func<Enum, bool> CheckEnabledUVs => f =>
         {
-	        Mesh mesh = target as Mesh;
-	        if (mesh == null) return false;
+	        if (GetMesh == null) return false;
+	        
+	        if (_userData == null || _userData.meshModifiers.Length == 0) return true;
+	        List<MeshModifier> modifiers = _userData.meshModifiers.ToList();
+	        
+	        bool isUVs = modifiers.FindIndex(m => m.modifier == Modifier.Collapse) == -1;
+	        if (!isUVs) return false;
+	        
+	        bool isUV0 = modifiers.FindIndex(m => m.uVs[0] == UVChannel.UV0 || m.uVs[1] == UVChannel.UV0) == -1;
+	        bool isUV1 = modifiers.FindIndex(m => m.uVs[0] == UVChannel.UV1 || m.uVs[1] == UVChannel.UV1) == -1;
+	        bool isUV2 = modifiers.FindIndex(m => m.uVs[0] == UVChannel.UV2 || m.uVs[1] == UVChannel.UV2) == -1;
+	        bool isUV3 = modifiers.FindIndex(m => m.uVs[0] == UVChannel.UV3 || m.uVs[1] == UVChannel.UV3) == -1;
+	        bool isUV4 = modifiers.FindIndex(m => m.uVs[0] == UVChannel.UV4 || m.uVs[1] == UVChannel.UV4) == -1;
+	        bool isUV5 = modifiers.FindIndex(m => m.uVs[0] == UVChannel.UV5 || m.uVs[1] == UVChannel.UV5) == -1;
+	        bool isUV6 = modifiers.FindIndex(m => m.uVs[0] == UVChannel.UV6 || m.uVs[1] == UVChannel.UV6) == -1;
+	        bool isUV7 = modifiers.FindIndex(m => m.uVs[0] == UVChannel.UV7 || m.uVs[1] == UVChannel.UV7) == -1;
 
-	        return (UVChannel) f == UVChannel.UV0 && mesh.uv != null && mesh.uv.Length > 0 ||
-	               (UVChannel) f == UVChannel.UV1 && mesh.uv2 != null && mesh.uv2.Length > 0 ||
-	               (UVChannel) f == UVChannel.UV2 && mesh.uv3 != null && mesh.uv3.Length > 0 ||
-	               (UVChannel) f == UVChannel.UV3 && mesh.uv4 != null && mesh.uv4.Length > 0 ||
-	               (UVChannel) f == UVChannel.UV4 && mesh.uv5 != null && mesh.uv5.Length > 0 ||
-	               (UVChannel) f == UVChannel.UV5 && mesh.uv6 != null && mesh.uv6.Length > 0 ||
-	               (UVChannel) f == UVChannel.UV6 && mesh.uv7 != null && mesh.uv7.Length > 0 ||
-	               (UVChannel) f == UVChannel.UV7 && mesh.uv8 != null && mesh.uv8.Length > 0;
+	        return (UVChannel) f == UVChannel.UV0 && isUV0 && GetMesh.uv != null && GetMesh.uv.Length > 0 ||
+	               (UVChannel) f == UVChannel.UV1 && !_modelImporter.generateSecondaryUV && isUV1 && GetMesh.uv2 != null && GetMesh.uv2.Length > 0 ||
+	               (UVChannel) f == UVChannel.UV2 && isUV2 && GetMesh.uv3 != null && GetMesh.uv3.Length > 0 ||
+	               (UVChannel) f == UVChannel.UV3 && isUV3 && GetMesh.uv4 != null && GetMesh.uv4.Length > 0 ||
+	               (UVChannel) f == UVChannel.UV4 && isUV4 && GetMesh.uv5 != null && GetMesh.uv5.Length > 0 ||
+	               (UVChannel) f == UVChannel.UV5 && isUV5 && GetMesh.uv6 != null && GetMesh.uv6.Length > 0 ||
+	               (UVChannel) f == UVChannel.UV6 && isUV6 && GetMesh.uv7 != null && GetMesh.uv7.Length > 0 ||
+	               (UVChannel) f == UVChannel.UV7 && isUV7 && GetMesh.uv8 != null && GetMesh.uv8.Length > 0 ||
+	               (UVChannel) f == UVChannel.None;
+        };
+        
+        private Func<Enum, bool> CheckEnabledEntities => f =>
+        {
+	        if (_userData == null || _userData.meshModifiers.Length == 0) return true;
+	        List<MeshModifier> modifiers = _userData.meshModifiers.ToList();
+	        
+	        bool isUVs = modifiers.FindIndex(m => m.modifier == Modifier.Collapse) == -1;
+	        bool isPosition = modifiers.FindIndex(m => m.entities[0] == Entity.Position) == -1;
+	        bool isNormal = modifiers.FindIndex(m => m.entities[0] == Entity.Normal) == -1;
+	        bool isTangent = modifiers.FindIndex(m => m.entities[0] == Entity.Tangent) == -1;
+	        bool isColor = modifiers.FindIndex(m => m.entities[0] == Entity.Color) == -1;
+
+	        return (Entity) f == Entity.UV && isUVs ||
+	               (Entity) f == Entity.Position && isPosition ||
+	               (Entity) f == Entity.Normal && isNormal ||
+	               (Entity) f == Entity.Tangent && isTangent ||
+	               (Entity) f == Entity.Color && isColor ||
+	               (Entity) f == Entity.None;
         };
 
         #endregion
@@ -61,12 +101,11 @@ namespace MeshExtensions.Editor
         {
 	        if (_modified)
 	        {
-		        Mesh mesh = target as Mesh;
-		        if (mesh != null )
+		        if (GetMesh != null )
 		        {
-			        string assetPath = AssetDatabase.GetAssetPath(mesh);
+			        string assetPath = AssetDatabase.GetAssetPath(GetMesh);
 			        int exit = EditorUtility.DisplayDialogComplex("Unapplied import settings",
-				        $"Unapplied import settings for mesh '{mesh.name}' with '{assetPath}'.",
+				        $"Unapplied import settings for mesh '{GetMesh.name}' with '{assetPath}'.",
 				        "Apply", "Cancel", "Revert");
 
 			        if (exit == 0) ApplyAndReimport();
@@ -117,13 +156,13 @@ namespace MeshExtensions.Editor
 	        bool add = GUILayout.Button(Styles.Add, GUILayout.Width(50));
 	        EditorGUILayout.EndHorizontal();
 
-	        if (_userData != null && _userData.meshFunctions.Length > 0)
+	        if (_userData != null && _userData.meshModifiers.Length > 0)
 	        {
 		        int showedIdx = 0;
 	        
-		        for (var i = 0; i < _userData.meshFunctions.Length; i++)
+		        for (var i = 0; i < _userData.meshModifiers.Length; i++)
 		        {
-			        Modifier modifier = _userData.meshFunctions[i].modifier;
+			        Modifier modifier = _userData.meshModifiers[i].modifier;
 			        bool isExpanded = BeginFoldoutBox(NameFunction(i), showedIdx, i);
 
 			        if (isExpanded)
@@ -134,6 +173,7 @@ namespace MeshExtensions.Editor
 					        case Modifier.Combine: DrawCombine(i); break;
 					        case Modifier.Manual: DrawManual(i); break;
 					        case Modifier.Mesh: DrawMesh(i); break;
+					        case Modifier.Collapse: DrawCollapse(i); break;
 					        case Modifier.Bounds: DrawBounds(i); break;
 					        default: DrawNone(i); break;
 				        }
@@ -159,16 +199,16 @@ namespace MeshExtensions.Editor
 
         private void DrawCombine(int idx)
         {
-            if (_userData.meshFunctions.Length <= idx) return;
+            if (_userData.meshModifiers.Length <= idx) return;
             
             EditorGUILayout.BeginVertical();
             
             EditorGUI.BeginChangeCheck();
-            Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshFunctions[idx].modifier,
+            Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshModifiers[idx].modifier,
 	            CheckEnabledMod, true);
             if (EditorGUI.EndChangeCheck())
             {
-	            _userData.meshFunctions[idx].modifier =  func;
+	            _userData.meshModifiers[idx].modifier = func;
 	            _modified = true;
             }
 
@@ -176,119 +216,130 @@ namespace MeshExtensions.Editor
             EditorGUILayout.LabelField(Styles.UVChanelCombine, EditorStyles.label);
             
             EditorGUI.BeginChangeCheck();
-            UVChannel uv0 = (UVChannel) EditorGUILayout.EnumPopup(Styles.UVChanelTo, _userData.meshFunctions[idx].uVs[0],
+            UVChannel uv0 = (UVChannel) EditorGUILayout.EnumPopup(Styles.UVChanelTo, _userData.meshModifiers[idx].uVs[0],
 	            CheckEnabledUVs, true, GUILayout.Width(70));
             if (EditorGUI.EndChangeCheck())
             {
-	            _userData.meshFunctions[idx].uVs[0] = uv0;
+	            _userData.meshModifiers[idx].uVs[0] = uv0;
 	            _modified = true;
             }
 
             EditorGUI.BeginChangeCheck();
-            UVChannel uv1 = (UVChannel) EditorGUILayout.EnumPopup(Styles.UVChanelFrom, _userData.meshFunctions[idx].uVs[1],
+            UVChannel uv1 = (UVChannel) EditorGUILayout.EnumPopup(Styles.UVChanelFrom, _userData.meshModifiers[idx].uVs[1],
 	            CheckEnabledUVs, true, GUILayout.Width(70));
             if (EditorGUI.EndChangeCheck())
             {
-	            _userData.meshFunctions[idx].uVs[1] = uv1;
+	            _userData.meshModifiers[idx].uVs[1] = uv1;
 	            _modified = true;
             }
             
             EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.EndVertical();
+            
+            Space(2);
         }
         
         private void DrawManual(int idx)
         {
-	        if (_userData.meshFunctions.Length <= idx) return;
+	        if (_userData.meshModifiers.Length <= idx) return;
 
 	        EditorGUILayout.BeginVertical();
             
 	        EditorGUI.BeginChangeCheck();
-	        Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshFunctions[idx].modifier,
+	        Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshModifiers[idx].modifier,
 		        CheckEnabledMod, true);
 	        if (EditorGUI.EndChangeCheck())
 	        {
-		        _userData.meshFunctions[idx].modifier =  func;
+		        _userData.meshModifiers[idx].modifier = func;
 		        _modified = true;
 	        }
 	        
 	        EditorGUI.BeginChangeCheck();
-	        Entity ent0 = (Entity) EditorGUILayout.EnumPopup(Styles.Array, _userData.meshFunctions[idx].entities[0]);
+	        Entity ent0 = (Entity) EditorGUILayout.EnumPopup(Styles.Array, _userData.meshModifiers[idx].entities[0],
+		        CheckEnabledEntities, true);
 	        if (EditorGUI.EndChangeCheck())
 	        {
-		        _userData.meshFunctions[idx].entities[0] = ent0;
+		        _userData.meshModifiers[idx].entities[0] = ent0;
 		        _modified = true;
 	        }
 
-	        if (_userData.meshFunctions[idx].entities[0] == Entity.UV)
+	        if (_userData.meshModifiers[idx].entities[0] == Entity.UV)
 	        {
 		        IndentLevel++;
 		        EditorGUI.BeginChangeCheck();
-		        UVChannel uv0 = (UVChannel) EditorGUILayout.EnumPopup(Styles.UVChanel, _userData.meshFunctions[idx].uVs[0]);
+		        UVChannel uv0 = (UVChannel) EditorGUILayout.EnumPopup(Styles.UVChanel,
+			        _userData.meshModifiers[idx].uVs[0], CheckEnabledUVs, true);
 		        if (EditorGUI.EndChangeCheck())
 		        {
-			        _userData.meshFunctions[idx].uVs[0] = uv0;
+			        _userData.meshModifiers[idx].uVs[0] = uv0;
 			        _modified = true;
 		        }
 		        IndentLevel--;
 	        }
 
-	        if (ent0 == Entity.Position || ent0 == Entity.Normal)
+	        if (ent0 != Entity.None)
 	        {
-		        EditorGUI.BeginChangeCheck();
-		        Vector3 vec0 = EditorGUILayout.Vector3Field(Styles.Point, _userData.meshFunctions[idx].points[0]);
-		        if (EditorGUI.EndChangeCheck())
+		        if (ent0 == Entity.Position || ent0 == Entity.Normal)
 		        {
-			        _userData.meshFunctions[idx].points[0] = vec0;
-			        _modified = true;
+			        EditorGUI.BeginChangeCheck();
+			        Vector3 vec0 = EditorGUILayout.Vector3Field(Styles.Point, _userData.meshModifiers[idx].points[0]);
+			        if (EditorGUI.EndChangeCheck())
+			        {
+				        _userData.meshModifiers[idx].points[0] = vec0;
+				        _modified = true;
+			        }
 		        }
-	        }
-	        else
-	        {
-		        EditorGUI.BeginChangeCheck();
-		        Vector4 vec0 = EditorGUILayout.Vector4Field(Styles.Point, _userData.meshFunctions[idx].points[0]);
-		        if (EditorGUI.EndChangeCheck())
+		        else
 		        {
-			        _userData.meshFunctions[idx].points[0] = vec0;
-			        _modified = true;
+			        EditorGUI.BeginChangeCheck();
+			        Vector4 vec0 = EditorGUILayout.Vector4Field(Styles.Point, _userData.meshModifiers[idx].points[0]);
+			        if (EditorGUI.EndChangeCheck())
+			        {
+				        _userData.meshModifiers[idx].points[0] = vec0;
+				        _modified = true;
+			        }
 		        }
 	        }
 	        
 	        EditorGUILayout.EndVertical();
+	        
+	        Space(2);
         }
         
         private void DrawMesh(int idx)
         {
-	        if (_userData.meshFunctions.Length <= idx) return;
+	        if (_userData.meshModifiers.Length <= idx) return;
 
 	        EditorGUILayout.BeginVertical();
             
 	        EditorGUI.BeginChangeCheck();
-	        Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshFunctions[idx].modifier,
+	        Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshModifiers[idx].modifier,
 		        CheckEnabledMod, true);
 	        if (EditorGUI.EndChangeCheck())
 	        {
-		        _userData.meshFunctions[idx].modifier =  func;
+		        _userData.meshModifiers[idx].modifier = func;
 		        _modified = true;
 	        }
 	        
 	        EditorGUI.BeginChangeCheck();
-	        Entity ent0 = (Entity) EditorGUILayout.EnumPopup(Styles.Array, _userData.meshFunctions[idx].entities[0]);
+	        Entity ent0 = (Entity) EditorGUILayout.EnumPopup(Styles.Array, _userData.meshModifiers[idx].entities[0],
+		        CheckEnabledEntities, true);
 	        if (EditorGUI.EndChangeCheck())
 	        {
-		        _userData.meshFunctions[idx].entities[0] = ent0;
+		        _userData.meshModifiers[idx].entities[0] = ent0;
 		        _modified = true;
 	        }
 
-	        if (_userData.meshFunctions[idx].entities[0] == Entity.UV)
+	        if (_userData.meshModifiers[idx].entities[0] == Entity.UV)
 	        {
 		        IndentLevel++;
 		        EditorGUI.BeginChangeCheck();
-		        UVChannel uv0 = (UVChannel) EditorGUILayout.EnumPopup(Styles.UVChanel, _userData.meshFunctions[idx].uVs[0]);
+		        UVChannel uv0 = (UVChannel) EditorGUILayout.EnumPopup(Styles.UVChanel,
+			        _userData.meshModifiers[idx].uVs[0], CheckEnabledUVs, true);
 		        if (EditorGUI.EndChangeCheck())
 		        {
-			        _userData.meshFunctions[idx].uVs[0] = uv0;
+			        _userData.meshModifiers[idx].uVs[0] = uv0;
 			        _modified = true;
 		        }
 		        IndentLevel--;
@@ -296,32 +347,32 @@ namespace MeshExtensions.Editor
 	        
 	        EditorGUI.BeginChangeCheck();
 	        Object obj1 = EditorGUILayout.ObjectField(Styles.Mesh,
-		        _userData.meshFunctions[idx].objects[0] ? (Mesh) _userData.meshFunctions[idx].objects[0] : null,
+		        _userData.meshModifiers[idx].objects[0] ? (Mesh) _userData.meshModifiers[idx].objects[0] : null,
 		        typeof(Mesh), false);
 	        if (EditorGUI.EndChangeCheck())
 	        {
-		        _userData.meshFunctions[idx].objects[0] = obj1;
+		        _userData.meshModifiers[idx].objects[0] = obj1;
 		        _modified = true;
 	        }
 
 	        if (obj1)
 	        {
 		        EditorGUI.BeginChangeCheck();
-		        Entity ent1 = (Entity) EditorGUILayout.EnumPopup(Styles.MeshArray, _userData.meshFunctions[idx].entities[1]);
+		        Entity ent1 = (Entity) EditorGUILayout.EnumPopup(Styles.MeshArray, _userData.meshModifiers[idx].entities[1]);
 		        if (EditorGUI.EndChangeCheck())
 		        {
-			        _userData.meshFunctions[idx].entities[1] = ent1;
+			        _userData.meshModifiers[idx].entities[1] = ent1;
 			        _modified = true;
 		        }
 
-		        if (_userData.meshFunctions[idx].entities[1] == Entity.UV)
+		        if (_userData.meshModifiers[idx].entities[1] == Entity.UV)
 		        {
 			        IndentLevel++;
 			        EditorGUI.BeginChangeCheck();
-			        UVChannel uv1 = (UVChannel) EditorGUILayout.EnumPopup(Styles.MeshUVChannel, _userData.meshFunctions[idx].uVs[1]);
+			        UVChannel uv1 = (UVChannel) EditorGUILayout.EnumPopup(Styles.MeshUVChannel, _userData.meshModifiers[idx].uVs[1]);
 			        if (EditorGUI.EndChangeCheck())
 			        {
-				        _userData.meshFunctions[idx].uVs[1] = uv1;
+				        _userData.meshModifiers[idx].uVs[1] = uv1;
 				        _modified = true;
 			        }
 			        IndentLevel--;
@@ -329,63 +380,106 @@ namespace MeshExtensions.Editor
 	        }
 
 	        EditorGUILayout.EndVertical();
+	        
+	        Space(2);
         }
 
         private void DrawBounds(int idx)
         {
-	        if (_userData.meshFunctions.Length <= idx) return;
+	        if (_userData.meshModifiers.Length <= idx) return;
 
 	        EditorGUILayout.BeginVertical();
             
 	        EditorGUI.BeginChangeCheck();
-	        Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshFunctions[idx].modifier,
+	        Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshModifiers[idx].modifier,
 		        CheckEnabledMod, true);
 	        if (EditorGUI.EndChangeCheck())
 	        {
-		        _userData.meshFunctions[idx].modifier =  func;
+		        _userData.meshModifiers[idx].modifier = func;
 		        _modified = true;
 	        }
 	        
 	        EditorGUI.BeginChangeCheck();
-	        Vector3 vec0 = EditorGUILayout.Vector3Field(Styles.BoundsCenter, _userData.meshFunctions[idx].points[0]);
+	        Vector3 vec0 = EditorGUILayout.Vector3Field(Styles.BoundsCenter, _userData.meshModifiers[idx].points[0]);
 	        if (EditorGUI.EndChangeCheck())
 	        {
-		        _userData.meshFunctions[idx].points[0] = vec0;
+		        _userData.meshModifiers[idx].points[0] = vec0;
 		        _modified = true;
 	        }
 	        
 	        EditorGUI.BeginChangeCheck();
-	        Vector3 vec1 = EditorGUILayout.Vector3Field(Styles.BoundsSize, _userData.meshFunctions[idx].points[1]);
+	        Vector3 vec1 = EditorGUILayout.Vector3Field(Styles.BoundsSize, _userData.meshModifiers[idx].points[1]);
 	        if (EditorGUI.EndChangeCheck())
 	        {
-		        _userData.meshFunctions[idx].points[1] = vec1;
+		        _userData.meshModifiers[idx].points[1] = vec1;
 		        _modified = true;
 	        }
 
 	        EditorGUILayout.EndVertical();
+	        
+	        Space(2);
+        }
+        
+        private void DrawCollapse(int idx)
+        {
+	        if (_userData.meshModifiers.Length <= idx) return;
+	        
+	        if (!GetMesh) return;
+
+	        EditorGUILayout.BeginVertical();
+	        
+	        EditorGUI.BeginChangeCheck();
+	        Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshModifiers[idx].modifier,
+		        CheckEnabledMod, true);
+	        if (EditorGUI.EndChangeCheck())
+	        {
+		        _userData.meshModifiers[idx].modifier = func;
+		        _modified = true;
+	        }
+	        
+	        if (_userData.meshModifiers[idx].folds == null)
+	        {
+		        _userData.meshModifiers[idx].folds = GetMesh.GetFolds(_modelImporter.generateSecondaryUV);
+	        }
+
+	        var icon = EditorGUIUtility.IconContent("d_ToggleUVOverlay"); //d_ToggleUVOverlay@2x;
+	        if (_modelImporter.generateSecondaryUV)
+	        {
+		        EditorGUILayout.LabelField(new GUIContent($"  Lightmap = UV1", icon.image));  
+	        }
+	        foreach (UVFold fold in _userData.meshModifiers[idx].folds)
+	        {
+		        EditorGUILayout.LabelField(new GUIContent($"  {fold.xy} + {fold.zw} = {fold.origin}", icon.image));    
+	        }
+
+	        EditorGUILayout.EndVertical();
+	        
+	        Space(2);
         }
         
         private void DrawNone(int idx)
         {
-	        if (_userData.meshFunctions.Length <= idx) return;
+	        if (_userData.meshModifiers.Length <= idx) return;
 
 	        EditorGUILayout.BeginVertical();
             
 	        EditorGUI.BeginChangeCheck();
-	        Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshFunctions[idx].modifier,
+	        Modifier func = (Modifier) EditorGUILayout.EnumPopup(Styles.Modifier, _userData.meshModifiers[idx].modifier,
 		        CheckEnabledMod, true);
 	        if (EditorGUI.EndChangeCheck())
 	        {
-		        _userData.meshFunctions[idx].modifier =  func;
+		        _userData.meshModifiers[idx].modifier = func;
 		        _modified = true;
 	        }
 
 	        EditorGUILayout.EndVertical();
+	        
+	        Space(2);
         }
 
         private void DrawButtons()
         {
-	        if (_userData != null && _userData.meshFunctions.Length > 0 || _modified)
+	        if (_userData != null && _userData.meshModifiers.Length > 0 || _modified)
 	        {
 		        Space();
 		        
@@ -412,11 +506,36 @@ namespace MeshExtensions.Editor
 
         #endregion
 
+        #region Settings Provider Methods
+
+        [SettingsProvider]
+        public static SettingsProvider CreateSettingsProvider()
+        {
+	        SettingsProvider provider = new SettingsProvider("Project/Mesh Importer", SettingsScope.Project)
+	        {
+		        guiHandler = searchContext =>
+		        {
+			        SerializedObject s = ProjectSettings.GetSerializedSettings();
+			        EditorGUILayout.LabelField("Model mesh import defaults", EditorStyles.boldLabel);
+			        EditorGUILayout.HelpBox(Styles.ProjectInfo.text, MessageType.None);
+			        EditorGUILayout.PropertyField(s.FindProperty("autoCollapsePostProcessor"), Styles.ProjectCollapse);
+			        EditorGUILayout.Space();
+			        EditorGUILayout.HelpBox(Styles.ProjectTip.text, MessageType.Info);
+			        s.ApplyModifiedProperties();
+
+		        },
+		        keywords = new HashSet<string>(new [] { "auto collapse post processor", "mesh import", "model import" })
+	        };
+	        return provider;
+        }
+
+        #endregion
+
         #region Private Methods
 
         private string NameFunction(int idx)
         {
-	        MeshModifier f = _userData.meshFunctions[idx];
+	        MeshModifier f = _userData.meshModifiers[idx];
 	        switch (f.modifier)
 	        {
 		        case Modifier.Combine: return $"  Combine {f.uVs[1]} to {f.uVs[0]}";
@@ -426,6 +545,7 @@ namespace MeshExtensions.Editor
 				        $"  Copy {f.uVs[0]} from {f.objects[0].name} {f.uVs[1]}" : 
 				        $"  Copy {f.entities[0]} from {f.objects[0].name} {f.entities[1]}";
 		        case Modifier.Bounds: return $"  Bounds Center {(Vector3)f.points[0]} Size {(Vector3)f.points[1]}";
+		        case Modifier.Collapse: return "  Collapse UVs";
 		        default: return "  None";
 	        }
         }
@@ -438,35 +558,34 @@ namespace MeshExtensions.Editor
 	        }
 	            
 	        MeshModifier f = new MeshModifier(target.name);
-	        List<MeshModifier> t = _userData.meshFunctions.ToList();
+	        List<MeshModifier> t = _userData.meshModifiers.ToList();
 	        t.Add(f);
-	        _userData.meshFunctions = t.ToArray();
+	        _userData.meshModifiers = t.ToArray();
         }
 
         private void DeleteFunction(int idx)
         {
-	        List<MeshModifier> t = _userData.meshFunctions.ToList();
+	        List<MeshModifier> t = _userData.meshModifiers.ToList();
 	        t.RemoveAt(idx);
-	        _userData.meshFunctions = t.ToArray();
+	        _userData.meshModifiers = t.ToArray();
         }
 
         private void InitAndReset()
         {
-            Mesh mesh = target as Mesh;
-            if (!mesh) return;
+	        if (!GetMesh) return;
             
-            AssetImporter assetImporter = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(mesh));
+            AssetImporter assetImporter = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(GetMesh));
             _userData = JsonUtility.FromJson<UserData>(assetImporter.userData);
+            _modelImporter = (ModelImporter) assetImporter;
             _modified = false;
         }
 
         private void ApplyAndReimport()
         {
-            Mesh mesh = target as Mesh;
-            if (!mesh) return;
+	        if (!GetMesh) return;
             
-            AssetImporter assetImporter = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(mesh));
-            if (_userData != null && _userData.meshFunctions.Length > 0)
+            AssetImporter assetImporter = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(GetMesh));
+            if (_userData != null && _userData.meshModifiers.Length > 0)
             {
 	            assetImporter.userData = JsonUtility.ToJson(_userData);
             }
@@ -479,7 +598,7 @@ namespace MeshExtensions.Editor
 
             _modified = false;
         }
-        
+
         #endregion
 
         #region Misc Drawing
@@ -617,6 +736,9 @@ namespace MeshExtensions.Editor
         private static class Styles
         {
 	        public static GUIContent Info = EditorGUIUtility.TrTextContent("Modifiers can be added to the import of this mesh. To do this, click on the 'Add' button at the top right.");
+	        public static GUIContent ProjectInfo = EditorGUIUtility.TrTextContent("These defaults are used when importing a new model asset in the model post-processor. Note that it is always possibe to change the initial values manually on mesh asset basis by selecting the asset in the inspector window.");
+	        public static GUIContent ProjectTip = EditorGUIUtility.TrTextContent("Tip: To apply the import settings to your models, re-import them into the project.");
+	        public static GUIContent ProjectCollapse = EditorGUIUtility.TrTextContent("Auto Collapse UVs", "For all meshes that are not manually configured, all UVs will automatically collapse.");
 	        public static GUIContent Add = EditorGUIUtility.TrTextContent("Add", "Add a new mesh modifier.");
 	        public static GUIContent Delete = EditorGUIUtility.TrTextContent("Delete", "Remove the mesh modifier.");
 	        public static GUIContent Apply = EditorGUIUtility.TrTextContent("Apply", "Apply modifiers to the mesh.");
