@@ -39,7 +39,13 @@ namespace MeshExtensions.Editor
         {
             if (string.IsNullOrEmpty(_path))
             {
-                List<string> s = sourceFilePath.Split('/').ToList();
+                List<string> s = new List<string>();
+				switch (Application.platform)
+				{
+					case RuntimePlatform.OSXEditor: s = sourceFilePath.Split('/').ToList(); break;
+					case RuntimePlatform.WindowsEditor: s = sourceFilePath.Split('\\').ToList(); break;
+					default: s = sourceFilePath.Split('/').ToList(); break;
+				}
                 int idx = s.FindIndex(x => x == "Assets");
                 List<string> c = new List<string>();
 
