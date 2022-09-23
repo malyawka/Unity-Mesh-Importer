@@ -39,7 +39,7 @@ namespace MeshExtensions.Editor
         {
             if (string.IsNullOrEmpty(_path))
             {
-                List<string> s = sourceFilePath.Split('/').ToList();
+                List<string> s = sourceFilePath.Split(Path.DirectorySeparatorChar).ToList();
                 int idx = s.FindIndex(x => x == "Assets");
                 List<string> c = new List<string>();
 
