@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -7,16 +8,35 @@ namespace MeshExtensions.Editor
 {
     public class MeshImporter : AssetPostprocessor
     {
+        #region Properties
+
+        public override int GetPostprocessOrder() => -100000;
+
+        #endregion
+        
         #region Variables
         
         private UserData _userData;
+        private bool _generateSecondaryUV;
 
         #endregion
 
         #region Unity Methods
 
+        private void OnPreprocessModel()
+        {
+            ModelImporter modelImporter = (ModelImporter) assetImporter;
+            if (modelImporter.generateSecondaryUV)
+            {
+                _generateSecondaryUV = true;
+                modelImporter.generateSecondaryUV = false;
+            }
+        }
+
         private void OnPostprocessModel(GameObject obj)
         {
+            ModelImporter modelImporter = (ModelImporter) assetImporter;
+
             _userData = JsonUtility.FromJson<UserData>(assetImporter.userData);
             _userData ??= new UserData();
             
@@ -46,9 +66,7 @@ namespace MeshExtensions.Editor
             }
             else
             {
-                ProjectSettings settings = ProjectSettings.GetOrCreateSettings();
-                ModelImporter modelImporter = (ModelImporter) assetImporter;
-                if (settings.autoCollapsePostProcessor)
+                if (ProjectSettings.AutoCollapsePostProcessor)
                 {
                     List<MeshModifier> functions = new List<MeshModifier>();
                     foreach (MeshFilter meshFilter in meshFilters)
@@ -68,7 +86,18 @@ namespace MeshExtensions.Editor
                     EditorUtility.SetDirty(assetImporter);
                 }
             }
-            
+
+            if (_generateSecondaryUV)
+            {
+                _generateSecondaryUV = false;
+                modelImporter.generateSecondaryUV = true;
+                
+                foreach (MeshFilter meshFilter in meshFilters)
+                {
+                    Unwrapping.GenerateSecondaryUVSet(meshFilter.sharedMesh);
+                }
+            }
+
             AssetDatabase.Refresh();
             AssetDatabase.SaveAssets();
         }
@@ -80,10 +109,10 @@ namespace MeshExtensions.Editor
         private void Combine(MeshFilter m, MeshModifier f)
         {
             if (f.uVs[0] == UVChannel.None || f.uVs[1] == UVChannel.None) return;
-            
+
             Mesh mesh = m.sharedMesh;
             List<Vector4> mainPoints = new List<Vector4>(), failPoints = new List<Vector4>();
-            
+
             mesh.GetUVs((int)f.uVs[0], mainPoints);
             mesh.GetUVs((int)f.uVs[1], failPoints);
 
@@ -91,9 +120,10 @@ namespace MeshExtensions.Editor
             {
                 mainPoints[i] = new Vector4(mainPoints[i].x, mainPoints[i].y, failPoints[i].x, failPoints[i].y);
             }
-            
+
             mesh.SetUVs((int)f.uVs[0], mainPoints);
-            mesh.SetUVs((int)f.uVs[1], new Vector4[0]);
+            //if (f.uVs[1] == UVChannel.UV1 && _generateSecondaryUV) return;
+            mesh.SetUVs((int)f.uVs[1], new List<Vector2>());
         }
 
         private void Manual(MeshFilter m, MeshModifier f)
@@ -246,7 +276,6 @@ namespace MeshExtensions.Editor
         private void Collapse(MeshFilter m, MeshModifier f)
         {
             Mesh mesh = m.sharedMesh;
-            ModelImporter modelImporter = (ModelImporter) assetImporter;
             UVFold[] folds = f.folds;
             List<Vector4>[] pointsArray = new List<Vector4>[folds.Length];
 
@@ -258,14 +287,14 @@ namespace MeshExtensions.Editor
                     pointsArray[a].Add(new Vector4(
                         mesh.GetUVVector(folds[a].xy, i).x, 
                         mesh.GetUVVector(folds[a].xy, i).y,
-                        mesh.GetUVVector(folds[a].zw, i).z, 
-                        mesh.GetUVVector(folds[a].zw, i).w));
+                        folds[a].zw != UVChannel.None ? mesh.GetUVVector(folds[a].zw, i).x : 0f, 
+                        folds[a].zw != UVChannel.None ? mesh.GetUVVector(folds[a].zw, i).y : 0f));
                 }
             }
 
             for (int u = 0; u < 8; u++)
             {
-                if (u == 1 && modelImporter.generateSecondaryUV) continue;
+                //if (u == 1 && _generateSecondaryUV) continue;
                 mesh.SetUVs(u, new List<Vector2>());
             }
 
@@ -278,11 +307,11 @@ namespace MeshExtensions.Editor
                     {
                         points.Add(new Vector2(pointsArray[a][i].x, pointsArray[a][i].y));
                     }
-                    mesh.SetUVs((int) folds[a].origin, points);
+                    mesh.SetUVs((int)folds[a].origin, points);
                 }
                 else
                 {
-                    mesh.SetUVs((int) folds[a].origin, pointsArray[a]);    
+                    mesh.SetUVs((int)folds[a].origin, pointsArray[a]);    
                 }
             }
         }

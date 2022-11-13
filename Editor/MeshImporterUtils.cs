@@ -126,7 +126,7 @@ namespace MeshExtensions.Editor
             List<UVChannel> uVs = new List<UVChannel>();
             List<UVChannel> freeUVs = new List<UVChannel>();
             if (mesh.uv != null && mesh.uv.Length > 0) uVs.Add(UVChannel.UV0);
-            if (mesh.uv2 != null && mesh.uv2.Length > 0 && !generateSecondaryUV) uVs.Add(UVChannel.UV1);
+            if (mesh.uv2 != null && mesh.uv2.Length > 0) uVs.Add(UVChannel.UV1);
             if (mesh.uv3 != null && mesh.uv3.Length > 0) uVs.Add(UVChannel.UV2);
             if (mesh.uv4 != null && mesh.uv4.Length > 0) uVs.Add(UVChannel.UV3);
             if (mesh.uv5 != null && mesh.uv5.Length > 0) uVs.Add(UVChannel.UV4);
@@ -143,13 +143,18 @@ namespace MeshExtensions.Editor
                 UVChannel origin = free ? freeUVs[0] : uVs[0];
                 UVChannel xy = uVs[0];
                 UVChannel zw = uVs.Count == 1 ? UVChannel.None : uVs[1];
+
+                if (generateSecondaryUV && origin == UVChannel.UV1 && zw != UVChannel.None)
+                {
+                    origin = xy == UVChannel.UV1 ? zw : xy;
+                }
                 
                 folds.Add(new UVFold(origin, xy, zw));
                 
                 if (free) freeUVs.RemoveAt(0);
                 if (origin != xy) freeUVs.Add(xy);
-                freeUVs.Add(zw);
-                
+                if (origin != zw && zw != UVChannel.None) freeUVs.Add(zw);
+
                 if (uVs.Count > 0) uVs.RemoveAt(0);
                 if (uVs.Count > 0) uVs.RemoveAt(0);
             }
